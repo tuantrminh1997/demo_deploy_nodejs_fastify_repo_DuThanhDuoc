@@ -1,0 +1,125 @@
+# Ta sẽ sử dụng Github Actions = tính năng / dịch vụ CI / CD của Github, được sử dụng để tự động chạy Workflow.
+
+# Tên của github action workflow
+# Tên này do ta tự nghĩ ra rồi đặt, dùng để nhận biết workflow trong tab Github Action.
+name: Deploy Production
+
+# Khai báo xem sự kiện nào sẽ kích hoạt workflow
+# Lý do cần có file này: Github Actions cần biết "khi nào thì chạy file này", nên phải có phần on.
+on:
+  # Ta yêu cầu Github thực thi workflow này khi có người push code lên
+  push:
+    # Nhưng chỉ thực thi workflow khi có người push code vào nhánh development
+    branches: ['development']
+  # Ta cũng yêu cầu Github thực thi workflow khi có Pull Request được merge
+  pull_request:
+    # Nhưng sẽ chỉ thực thi khi Pull Request được merge vào nhánh development.
+    branches: ['development']
+
+# Khai báo các CÔNG VIỆC LỚN mà workflow phải làm
+jobs:
+  # Công việc 1: build - tên do ta tự đặt
+  # Nhiệm vụ chính của Công việc: thử cài và build trước khi tiến hành deploy
+  build:
+    # Ta yêu cầu Github cấp 1 máy tính Ubuntu tạm thời -> mục đích để thực thi toàn bộ công việc của Job Build
+    runs-on: ubuntu-latest
+    # Danh sách các bước của Job build
+    steps:
+      # Bước 1:
+      # Ta yêu cầu Github Action sử dụng action actions/checkout phiên bản V4 để "checkout" sang và pull source code của repository này
+      # -> về máy tính Ubuntu tạm thời mà nó tạo ra để các bước sau có code mà làm việc.
+      #
+      # Github Action sẽ chạy action actions/checkout phiên bản V4 để làm việc này.
+      - uses: actions/checkout@v4
+
+      # Bước 2:
+      # Ta đặt tên hiển thị cho bước chuẩn bị Node.js
+      #
+      # ${{  }} sẽ yêu cầu Github lấy 1 giá trị từ context của workflow.
+      # -> ở đây ta yêu cầu lấy giá trị matrix.node-version.
+      #
+      # Chú ý: Tuy nhiên file hiện tại không khai báo matrix, name này chưa khớp với cấu hình.
+      - name: Use Nodejs ${{ matrix.node-version }}
+        # Ta yêu cầu Github action chạy action setup-node để chuẩn bị môi trường Node.js
+        # trên máy Ubuntu tạm thời của Github
+        #
+        # Github action sẽ chạy Chính action actions/setup-node@v4 -> thực hiện việc cài Node.js
+        uses: actions/setup-node@v4
+
+        # Ta truyền các yêu cầu cấu hình bên dưới cho action setup-node của Github Action
+        with:
+          # Ta yêu cầu Github action thực thi action setup-node v4 cài Nodejs phiên bản 20.18.0
+          # Ta ghi trực tiếp phiên bản 20.18.0 vào workflow này.
+          node-version: 20.18.0
+
+          # Ta yêu cầu Github Action thực thi action setup-node kèm tính năng hỗ trợ cache cho npm.
+          # -> Mục đích để việc cài dependency ở những lần sau nhanh hơn nhờ tính năng cache này.
+          cache: 'npm'
+
+      # Bước 3: Tạo File .env
+      # Ta đặt tên cho bước này
+      - name: Create .env file
+
+        # Ta yêu cầu shell trên máy tính Ubuntu chạy lệnh echo này.
+        #
+        # Github sẽ lấy giá trị của secret có tên ENV_PRODUCTION,
+        # Sau đó shell ghi giá trị đó vào file .env.
+        #
+        # "secrets" chính là kho Github Secrets;
+        # ENV_PRODUCTIONS là tên secrets do ta tạo.
+        run: echo "${{ secrets.ENV_PRODUCTION }}" > .env
+
+      # Bước 4: cài đặt dependencies
+      # Ta yêu cầu npm trên máy Ubuntu thực hiện cài đặt dependencies của project.
+      #
+      # npm sẽ đọc package.json / package-lock.json
+      # để biết cần cài đặt những package nào.
+      - run: npm install --force
+
+      # bước 5: build dự án.
+      # Ta yêu cầu npm chạy script có tên "build"
+      #
+      # npm tìm script có tên build trong "script" của package.json
+      - run: npm run build
+
+  # Ta tạo Job thứ 2 có tên "deploy"
+  # -> Job này sẽ chịu trách nhiệm đưa phiên bản mới nhất lên VPS.
+  deploy:
+    # Ta cần yêu cầu Github cấp 1 máy tính Ubuntu tạm thời.
+    # để thực hiện công việc của job deploy.
+    #
+    # Đây chính là máy của Github, chưa phải VPS của ta.
+    runs-on: ubuntu-latest
+
+    # Ta yêu cầu Github chỉ chạy job deploy
+    # sau khi job có tên "build" chạy thành công.
+    #
+    # "build" ở đây chính là job build: được khai báo phía trên.
+    needs: build
+
+    # Ta khai báo các bước mà job deploy phải thực hiện
+    steps:
+      # bước 1: Đặt tên cho bước kết nối SSH vào VPS
+      - name: Executin remote ssh commands using password
+
+        # Ta yêu cầu Github chạy action appleboy/ssh-action - phiên bản @1.2.0
+        #
+        # Chính action này sẽ nhận thông tin bên dưới,
+        # kết nối SSH từ máy Github vào VPS và chạy lệnh trên VPS.
+        uses: appleboy/ssh-action@v1.2.0
+
+        # Ta cần truyền các thông tin cần thiết (Gía trị biến môi trường) cho action appleboy/ssh-action.
+        with:
+          # Ta nói cho action appleboy/ssh-action@v1.2.0 biết phải SSH tới máy nào nhờ việc truyền giá trị host cho nó
+          # host ta lấy từ giá trị môi trường HOST_PRODUCTION
+          #
+          # Github sẽ lấy giá trị biến HOST_PRODUCTION từ Github Secrets rồi đưa
+          # giá trị đó cho action appleboy/ssh-action@v1.2.0 làm địa chỉ VPS.
+          host: ${{ secrets.HOST_PRODUCTION }}
+
+          # Ta nói cho action appleboy/ssh-action biết phải đăng nhập vào VPS bằng username nào.
+          #
+          # Gía trị thật được Github lấy từ secret USERNAME_PRODUCTION
+          username: ${{ secrets.USERNAME_PRODUCTION }}
+
+          #
