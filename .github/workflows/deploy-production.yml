@@ -168,6 +168,15 @@ jobs:
             # để các lệnh npm phía dưới có thể sử dụng được.
             source ~/.nvm/nvm.sh
 
+            # Yêu cầu shell trên VPS chuyển vào thư mục project.
+            # 
+            # Từ đây các lệnh git / npm phía dưới
+            # sẽ tác động lên project deploy demo_deploy_nodejs_fastify_repo_DuThanhDuoc
+            cd ~/demo_deploy_nodejs_fastify_repo_DuThanhDuoc
+
+            # Yêu cầu Git trên VPS liên hệ các remote repo
+            git fetch --all
+
             # Ta yêu cầu Git trên VPS ép source code hiện tại
             # trở thành đúng phiên bản của origin / main.
             # 
