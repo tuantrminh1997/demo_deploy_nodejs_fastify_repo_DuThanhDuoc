@@ -80,7 +80,7 @@ jobs:
       # Ta yêu cầu npm chạy script có tên "build"
       #
       # npm tìm script có tên build trong "script" của package.json
-      - run: npm run 
+      - run: npm run
 
   # Ta tạo Job thứ 2 có tên "deploy"
   # -> Job này sẽ chịu trách nhiệm đưa phiên bản mới nhất lên VPS.
@@ -132,13 +132,13 @@ jobs:
           # đang lắng nghe ở Port nào.
           #
           # Gía trị được lấy từ secret PORT_PRODUCTION
-          # 
+          #
           # --- Giải thích bản chất của PORT_PRODUCTION ---
-          # PORT_PRODUCTION ở đây là port SSH mà Github Actions sẽ dùng để kết nối vào VPS 
+          # PORT_PRODUCTION ở đây là port SSH mà Github Actions sẽ dùng để kết nối vào VPS
           # -> nếu VPS của ta dùng SSH mặc định thì thường PORT_PRODUCTION = 22, không liên quan gì tới Nginx ở đây:
           # Nginx thì thường lắng nghe:
           # HTTP -> PORT 80
-          # HTTPS -> PORT 
+          # HTTPS -> PORT
           # Có thể hình dung như sau:
           # 1. IP VPS: Xác định đúng máy chủ nào trên Internet
           # 2. Port 22: Xác định đúng DỊCH VỤ nào đang chạy trên máy đó với PORT 22
@@ -147,7 +147,7 @@ jobs:
           # Nhận kết nối SSH
           # Xác thực username / password hoặc SSH Key
           # Sau đó mở shell để chạy lệnh
-          # 
+          #
           # -> Cho nên nếu ta kết nối: ssh user@103.x.x.x.x -p 22 thì bản chất là ta đang yêu cầu máy tính:
           # "Hãy kết nói tới máy tính có public IP là 103.x.x.x rồi tìm dịch vụ trên máy tính nó đang nghe cổng 22, và thế là chạy tới SSH Server và kết nối SSH được thiết lập"
           port: ${{ secrets.PORT_PRODUCTION }}
@@ -155,7 +155,10 @@ jobs:
           # Ta yêu cầu action appleboy/ssh-action@v1.2.0:
           # Sau khi kết nối thành công vào VPS,
           # hãy gửi và chạy lần lượt các lệnh bên dưới trên VPS.
-          scripts:
+          #
+          # Chú ý 1: Action appleboy/ssh-action nhận input là script, không phải scripts
+          # Chú ý 2: Vì ta đang sử dụng shell nhiều dòng nên cần dấu | ở đầu
+          script: |
             # Ta yêu cầu shell trên VPS tạo biến NVM_DIR
             # và trỏ nó tới thư mục ~/.nvm
             #
@@ -216,4 +219,3 @@ jobs:
             # Chính PM2 sẽ stop/start lại application,
             # để phiên bản mới vừa build được đưa vào chạy.
             pm2 restart Project_Deploy_Fastify_Server
-
