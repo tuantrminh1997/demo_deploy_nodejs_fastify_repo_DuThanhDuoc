@@ -175,7 +175,7 @@ jobs:
             # "main" - branch main trên remote đó.
             # 
             # Chính Git thực hiện việc thay đổi các file trong project.
-            git reset --hard origin/main
+            git reset --hard origin/development
 
             # Ta yêu cầu Github lấy secret ENV_PRODUCTION,
             # Rồi gửi câu lệnh này qua SSH để shell trên VPS ghi nội dung
