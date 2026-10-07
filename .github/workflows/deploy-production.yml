@@ -67,6 +67,8 @@ jobs:
         #
         # "secrets" chính là kho Github Secrets;
         # ENV_PRODUCTIONS là tên secrets do ta tạo.
+        #
+        # Điền full nội dung file .env mà ta dùng trong repo vào biến ENV_PRODUCTION
         run: echo "${{ secrets.ENV_PRODUCTION }}" > .env
 
       # Bước 4: cài đặt dependencies
@@ -115,6 +117,8 @@ jobs:
           #
           # Github sẽ lấy giá trị biến HOST_PRODUCTION từ Github Secrets rồi đưa
           # giá trị đó cho action appleboy/ssh-action@v1.2.0 làm địa chỉ VPS.
+          #
+          # Điền giá trị public IP của VPS vào biến HOST_PRODUCTION
           host: ${{ secrets.HOST_PRODUCTION }}
 
           # Ta nói cho action appleboy/ssh-action biết phải đăng nhập vào VPS bằng username nào.
@@ -150,6 +154,15 @@ jobs:
           #
           # -> Cho nên nếu ta kết nối: ssh user@103.x.x.x.x -p 22 thì bản chất là ta đang yêu cầu máy tính:
           # "Hãy kết nói tới máy tính có public IP là 103.x.x.x rồi tìm dịch vụ trên máy tính nó đang nghe cổng 22, và thế là chạy tới SSH Server và kết nối SSH được thiết lập"
+          #
+          # Ta điền PORT của chương trình SSH Server, gồm các chức năng:
+          # 1. Lắng nghe kết nối: luôn luôn mở 1 cổng mạng (mặc định là PORT 22) trên VPS để chờ yêu cầu kết nối từ các máy tính cá
+          # cá nhân khác (SSH Client)
+          # 2. Xác thực người dùng (Authentication): Kiểm tra danh tính của người kết nối thông qua mật khẩu hoặc khóa (public key / private key).
+          # 3. Mã hóa kênh truyền (Encryption): Tạo ra 1 đường truyền dữ liệu được mã hóa hoàn toàn giữa VPS và máy tính cá nhân, giúp ngăn chặn
+          # việc bị nghe lén hay đánh cắp dữ liệu.
+          # 4. Thực thi lệnh từ xa (Remote Execution): Tiếp nhận các câu lệnh từ máy của bạn và gửi sang VPS, chạy chúng trên hệ thống của VPS và
+          # trả lại kết quả qua màn hình.
           port: ${{ secrets.PORT_PRODUCTION }}
 
           # Ta yêu cầu action appleboy/ssh-action@v1.2.0:
