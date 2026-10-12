@@ -1,0 +1,255 @@
+# Ta sẽ sử dụng Github Actions = tính năng / dịch vụ CI / CD của Github, được sử dụng để tự động chạy Workflow.
+
+# Tên của github action workflow
+# Tên này do ta tự nghĩ ra rồi đặt, dùng để nhận biết workflow trong tab Github Action.
+name: Deploy Staging for NextJS
+
+# Khai báo xem sự kiện nào sẽ kích hoạt workflow
+# Lý do cần có file này: Github Actions cần biết "khi nào thì chạy file này", nên phải có phần on.
+on:
+  # Ta yêu cầu Github thực thi workflow này khi có người push code lên
+  push:
+    # Nhưng chỉ thực thi workflow khi có người push code vào nhánh staging
+    branches: ["staging"]
+  # Ta cũng yêu cầu Github thực thi workflow khi có Pull Request được merge
+  pull_request:
+    # Nhưng sẽ chỉ thực thi khi Pull Request được merge vào nhánh staging.
+    branches: ["staging"]
+
+# Khai báo các CÔNG VIỆC LỚN mà workflow phải làm
+jobs:
+  # Công việc 1: build - tên do ta tự đặt
+  # Nhiệm vụ chính của Công việc: thử cài và build trước khi tiến hành deploy
+  build:
+    # Ta yêu cầu Github cấp 1 máy tính Ubuntu tạm thời -> mục đích để thực thi toàn bộ công việc của Job Build
+    runs-on: ubuntu-latest
+    # Danh sách các bước của Job build
+    steps:
+      # Bước 1:
+      # Ta yêu cầu Github Action sử dụng action actions/checkout phiên bản V4 để "checkout" sang và pull source code của repository này
+      # -> về máy tính Ubuntu tạm thời mà nó tạo ra để các bước sau có code mà làm việc.
+      #
+      # Github Action sẽ chạy action actions/checkout phiên bản V4 để làm việc này.
+      - uses: actions/checkout@v4
+
+      # Bước 2:
+      # Ta đặt tên hiển thị cho bước chuẩn bị Node.js
+      #
+      # ${{  }} sẽ yêu cầu Github lấy 1 giá trị từ context của workflow.
+      # -> ở đây ta yêu cầu lấy giá trị matrix.node-version.
+      #
+      # Chú ý: Tuy nhiên file hiện tại không khai báo matrix, name này chưa khớp với cấu hình.
+      - name: Use Nodejs ${{ matrix.node-version }}
+        # Ta yêu cầu Github action chạy action setup-node để chuẩn bị môi trường Node.js
+        # trên máy Ubuntu tạm thời của Github
+        #
+        # Github action sẽ chạy Chính action actions/setup-node@v4 -> thực hiện việc cài Node.js
+        uses: actions/setup-node@v4
+
+        # Ta truyền các yêu cầu cấu hình bên dưới cho action setup-node của Github Action
+        with:
+          # Ta yêu cầu Github action thực thi action setup-node v4 cài Nodejs phiên bản 20.18.0
+          # Ta ghi trực tiếp phiên bản 20.18.0 vào workflow này.
+          node-version: 20.18.0
+
+          # Ta yêu cầu Github Action thực thi action setup-node kèm tính năng hỗ trợ cache cho npm.
+          # -> Mục đích để việc cài dependency ở những lần sau nhanh hơn nhờ tính năng cache này.
+          cache: "npm"
+
+      # Bước 3: Tạo File .env
+      # Ta đặt tên cho bước này
+      - name: Create .env file
+
+        # Ta yêu cầu shell trên máy tính Ubuntu chạy lệnh echo này.
+        #
+        # Github sẽ lấy giá trị của secret có tên ENV_STAGING,
+        # Sau đó shell ghi giá trị đó vào file .env.
+        #
+        # "secrets" chính là kho Github Secrets;
+        # ENV_STAGINGS là tên secrets do ta tạo.
+        #
+        # Điền full nội dung file .env mà ta dùng trong repo vào biến ENV_STAGING
+        run: echo "${{ secrets.ENV_STAGING }}" > .env
+
+      # Bước 4: cài đặt dependencies
+      # Ta yêu cầu npm trên máy Ubuntu thực hiện cài đặt dependencies của project.
+      #
+      # npm sẽ đọc package.json / package-lock.json
+      # để biết cần cài đặt những package nào.
+      - run: npm install --force
+
+      # bước 5: build dự án.
+      # Ta yêu cầu npm chạy script có tên "build"
+      #
+      # npm tìm script có tên build trong "script" của package.json
+      - run: npm run
+
+  # Ta tạo Job thứ 2 có tên "deploy"
+  # -> Job này sẽ chịu trách nhiệm đưa phiên bản mới nhất lên VPS.
+  deploy:
+    # Ta cần yêu cầu Github cấp 1 máy tính Ubuntu tạm thời.
+    # để thực hiện công việc của job deploy.
+    #
+    # Đây chính là máy của Github, chưa phải VPS của ta.
+    runs-on: ubuntu-latest
+
+    # Ta yêu cầu Github chỉ chạy job deploy
+    # sau khi job có tên "build" chạy thành công.
+    #
+    # "build" ở đây chính là job build: được khai báo phía trên.
+    needs: build
+
+    # Ta khai báo các bước mà job deploy phải thực hiện
+    steps:
+      # bước 1: Đặt tên cho bước kết nối SSH vào VPS
+      - name: Executin remote ssh commands using password
+
+        # Ta yêu cầu Github chạy action appleboy/ssh-action - phiên bản @1.2.0
+        #
+        # Chính action này sẽ nhận thông tin bên dưới,
+        # kết nối SSH từ máy Github vào VPS và chạy lệnh trên VPS.
+        uses: appleboy/ssh-action@v1.2.0
+
+        # Ta cần truyền các thông tin cần thiết (Gía trị biến môi trường) cho action appleboy/ssh-action.
+        with:
+          # Ta nói cho action appleboy/ssh-action@v1.2.0 biết phải SSH tới máy nào nhờ việc truyền giá trị host cho nó
+          # host ta lấy từ giá trị môi trường HOST_STAGING (Chính )
+          #
+          # Github sẽ lấy giá trị biến HOST_STAGING từ Github Secrets rồi đưa
+          # giá trị đó cho action appleboy/ssh-action@v1.2.0 làm địa chỉ VPS.
+          #
+          # Điền giá trị public IP của VPS vào biến HOST_STAGING
+          host: ${{ secrets.HOST_STAGING }}
+
+          # Ta nói cho action appleboy/ssh-action biết phải đăng nhập vào VPS bằng username nào.
+          #
+          # Gía trị thật được Github lấy từ secret USERNAME_STAGING
+          username: ${{ secrets.USERNAME_STAGING }}
+
+          # Ta cung cấp password để action appleboy/ssh-action@v1.2.0 xác thực với VPS
+          #
+          # Github sẽ lấy password tử secret PASSWORD_STAGING
+          # thay vì viết password thật trực tiếp trong source code.
+          password: ${{ secrets.PASSWORD_STAGING }}
+
+          # Ta nói cho action appleboy/ssh-action@v1.2.0 biết SSH Server trên VPS
+          # đang lắng nghe ở Port nào.
+          #
+          # Gía trị được lấy từ secret PORT_STAGING
+          #
+          # --- Giải thích bản chất của PORT_STAGING ---
+          # PORT_STAGING ở đây là port SSH mà Github Actions sẽ dùng để kết nối vào VPS
+          # -> nếu VPS của ta dùng SSH mặc định thì thường PORT_STAGING = 22, không liên quan gì tới Nginx ở đây:
+          # Nginx thì thường lắng nghe:
+          # HTTP -> PORT 80
+          # HTTPS -> PORT
+          # Có thể hình dung như sau:
+          # 1. IP VPS: Xác định đúng máy chủ nào trên Internet
+          # 2. Port 22: Xác định đúng DỊCH VỤ nào đang chạy trên máy đó với PORT 22
+          # 3. SSH Server / sshd
+          # Chương trình SSH Server đang lắng nghe trên máy tính VPS với port 22
+          # Nhận kết nối SSH
+          # Xác thực username / password hoặc SSH Key
+          # Sau đó mở shell để chạy lệnh
+          #
+          # -> Cho nên nếu ta kết nối: ssh user@103.x.x.x.x -p 22 thì bản chất là ta đang yêu cầu máy tính:
+          # "Hãy kết nói tới máy tính có public IP là 103.x.x.x rồi tìm dịch vụ trên máy tính nó đang nghe cổng 22, và thế là chạy tới SSH Server và kết nối SSH được thiết lập"
+          #
+          # Ta điền PORT của chương trình SSH Server, gồm các chức năng:
+          # 1. Lắng nghe kết nối: luôn luôn mở 1 cổng mạng (mặc định là PORT 22) trên VPS để chờ yêu cầu kết nối từ các máy tính cá
+          # cá nhân khác (SSH Client)
+          # 2. Xác thực người dùng (Authentication): Kiểm tra danh tính của người kết nối thông qua mật khẩu hoặc khóa (public key / private key).
+          # 3. Mã hóa kênh truyền (Encryption): Tạo ra 1 đường truyền dữ liệu được mã hóa hoàn toàn giữa VPS và máy tính cá nhân, giúp ngăn chặn
+          # việc bị nghe lén hay đánh cắp dữ liệu.
+          # 4. Thực thi lệnh từ xa (Remote Execution): Tiếp nhận các câu lệnh từ máy của bạn và gửi sang VPS, chạy chúng trên hệ thống của VPS và
+          # trả lại kết quả qua màn hình.
+          port: ${{ secrets.PORT_STAGING }}
+
+          # Ta yêu cầu action appleboy/ssh-action@v1.2.0:
+          # Sau khi kết nối thành công vào VPS,
+          # hãy gửi và chạy lần lượt các lệnh bên dưới trên VPS.
+          #
+          # Chú ý 1: Action appleboy/ssh-action nhận input là script, không phải scripts
+          # Chú ý 2: Vì ta đang sử dụng shell nhiều dòng nên cần dấu | ở đầu
+          script: |
+            # Ta yêu cầu shell trên VPS tạo biến NVM_DIR
+            # và trỏ nó tới thư mục ~/.nvm
+            #
+            # "~" là thư mục home của user vừa SSH vào.
+            export NVM_DIR=~/.nvm
+
+            # Ta yêu cầu shell trên VPS nạp file nvm.sh
+            #
+            # Chính file này đưa NVM / Node / npm vào phiên shell hiện tại,
+            # để các lệnh npm phía dưới có thể sử dụng được.
+            source ~/.nvm/nvm.sh
+
+            # Yêu cầu shell trên VPS chuyển vào thư mục project.
+            # 
+            # Từ đây các lệnh git / npm phía dưới
+            # sẽ tác động lên project deploy demo_deploy_nextjs_repo_DuThanhDuoc
+            cd ~/staging/demo_deploy_nextjs_repo_DuThanhDuoc
+
+            # Yêu cầu Git trên VPS liên hệ các remote repo
+            git fetch --all
+
+            # Ta yêu cầu Git trên VPS ép source code hiện tại
+            # trở thành đúng phiên bản của origin / staging.
+            # 
+            # "origin" = tên remote git.
+            # "staging" - branch staging trên remote đó.
+            # 
+            # Chính Git thực hiện việc thay đổi các file trong project.
+            git reset --hard origin/staging
+
+            # Ta yêu cầu Github lấy secret ENV_STAGING,
+            # Rồi gửi câu lệnh này qua SSH để shell trên VPS ghi nội dung
+            # này vào trong file .env
+            echo "${{ secrets.ENV_STAGING }}" > .env
+
+            # Ta yêu cầu npm trên VPS cài dependency
+            # tương ứng với source code mới vừa lấy về.
+            # 
+            # npm đọc package.json / package-lock.json để biết phải cài gì.
+            npm install --force
+
+            # Ta yêu cầu npx chạy Prisma CLI
+            # 
+            # Prisma sẽ đọc Prisma Schema của project
+            # rồi generate Prisma Client tương ứng.
+            npx prisma generate
+
+            # Ta yêu cầu npm trên VPS chạy script "build".
+            # 
+            # npm đọc script "build" từ package.json
+            # rồi build phiên bản source code mới.
+            npm run build
+
+            # Ta yêu cầu PM2 tìm process có tên "fastify"
+            # và khởi động lại process đó.
+            #
+            # "Fastify" là tên process đã được đăng ký với PM2 trước đó.
+            # Chính PM2 sẽ stop/start lại application,
+            # để phiên bản mới vừa build được đưa vào chạy.
+            pm2 restart Project_Deploy_Next_JS
+
+# Work flow tổng quát khi có code push vào nhánh được chỉ định (GITHUB ACTIONS PHÁT HIỆN CÓ WORKFLOW):
+# Push code lên GitHub
+#         ↓
+# GitHub Actions phát hiện workflow
+#         ↓
+# 🟡 In progress
+#         ↓
+# GitHub Actions Runner chạy các step
+# ├── checkout code
+# ├── setup Node.js
+# ├── chuẩn bị SSH
+# └── ssh vào VPS
+#         ↓
+#      VPS
+#      ├── git pull
+#      ├── npm install
+#      ├── npm run build
+#      └── pm2 restart
+#         ↓
+# ✅ Workflow thành công
