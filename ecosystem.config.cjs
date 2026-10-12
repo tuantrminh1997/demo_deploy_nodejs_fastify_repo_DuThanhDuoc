@@ -98,3 +98,29 @@ module.exports = {
     }
   ]
 }
+// Chú ý quan trọng:
+// Chú ý 1: PM2 có khả năng thiết lập hoặc ghi đè các biến môi trường được truyền cho process mà nó khởi chạy.
+// 1. Khi viết PORT: 3002
+// env: {
+//   PORT: 3002,
+// }
+
+// - PM2 nhận giá trị 3002 được khai báo cố định.
+// - PM2 truyền PORT=3002 vào môi trường của process ứng dụng.
+// - Ứng dụng đọc process.env.PORT → nhận được "3002".
+// 2. Khi viết PORT: process.env.PORT
+// env: {
+//   PORT: process.env.PORT,
+// }
+
+// - Khi PM2 đọc file ecosystem, JavaScript lấy giá trị PORT từ môi trường của chính process đang đọc cấu hình.
+// - Giả sử môi trường lúc đó có PORT=4000.
+// - PM2 truyền PORT=4000 xuống process ứng dụng.
+// - Ứng dụng đọc process.env.PORT → nhận được "4000".
+// Điểm khác nhau: Trường hợp 1 bạn cố định giá trị PORT trong code cấu hình PM2. Trường hợp 2 bạn lấy PORT từ môi trường bên ngoài để cấu hình linh hoạt.
+// 3. Có phải process luôn ưu tiên PM2?
+// Không hoàn toàn. Ứng dụng mới là nơi quyết định cách sử dụng biến PORT.
+// Ví dụ, nếu package.json của Next.js có:
+// "start": "next start -p 5000"
+
+// Thì dù PM2 truyền PORT=3002, Next.js vẫn lắng nghe tại cổng 5000, vì tham số -p được ưu tiên hơn biến môi trường PORT.
