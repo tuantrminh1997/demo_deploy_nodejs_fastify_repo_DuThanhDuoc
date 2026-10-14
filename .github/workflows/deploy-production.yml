@@ -231,7 +231,7 @@ jobs:
             # "Fastify" là tên process đã được đăng ký với PM2 trước đó.
             # Chính PM2 sẽ stop/start lại application,
             # để phiên bản mới vừa build được đưa vào chạy.
-            pm2 restart Project_Deploy_Fastify_Server
+            pm2 restart Fastify_server
 
 # Work flow tổng quát khi có code push vào nhánh được chỉ định (GITHUB ACTIONS PHÁT HIỆN CÓ WORKFLOW):
 # Push code lên GitHub
