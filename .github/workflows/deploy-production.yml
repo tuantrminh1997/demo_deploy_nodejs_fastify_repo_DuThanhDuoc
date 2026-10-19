@@ -2,7 +2,7 @@
 
 # Tên của github action workflow
 # Tên này do ta tự nghĩ ra rồi đặt, dùng để nhận biết workflow trong tab Github Action.
-name: Deploy Production for NextJS
+name: Deploy Production for Server Fastify - Production
 
 # Khai báo xem sự kiện nào sẽ kích hoạt workflow
 # Lý do cần có file này: Github Actions cần biết "khi nào thì chạy file này", nên phải có phần on.
@@ -12,7 +12,6 @@ on:
     # Nhưng chỉ thực thi workflow khi có người push code vào nhánh production
     branches: ['production']
   # Ta cũng yêu cầu Github thực thi workflow khi có Pull Request được merge
-  # -> Thực tế ta không làm thế này -> chỉ auto chạy github action khi xuất hiện commit mới trên nhánh production
   # pull_request:
   # Nhưng sẽ chỉ thực thi khi Pull Request được merge vào nhánh production.
   # branches: ['production']
@@ -232,7 +231,13 @@ jobs:
             # "Fastify" là tên process đã được đăng ký với PM2 trước đó.
             # Chính PM2 sẽ stop/start lại application,
             # để phiên bản mới vừa build được đưa vào chạy.
-            pm2 restart Fastify_server
+            # 
+            # Nếu không có cờ --update-env thì:
+            # PM2 khởi động lại ứng dụng, Mặc định tiếp tục sử dụng bộ biến môi trường đã lưu trước đó.
+            # Nếu có cờ --update-end thì:
+            # PM2 khởi động lại ứng dụng.
+            # Đồng thời cập nhật biến môi trường từ shell đang thực thi lệnh.
+            pm2 restart Fastify_server_production --update-end
 
 # Work flow tổng quát khi có code push vào nhánh được chỉ định (GITHUB ACTIONS PHÁT HIỆN CÓ WORKFLOW):
 # Push code lên GitHub

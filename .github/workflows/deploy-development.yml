@@ -2,7 +2,7 @@
 
 # Tên của github action workflow
 # Tên này do ta tự nghĩ ra rồi đặt, dùng để nhận biết workflow trong tab Github Action.
-name: Deploy Development for NextJS
+name: Deploy Development for Server Fastify - development
 
 # Khai báo xem sự kiện nào sẽ kích hoạt workflow
 # Lý do cần có file này: Github Actions cần biết "khi nào thì chạy file này", nên phải có phần on.
@@ -76,13 +76,18 @@ jobs:
       #
       # npm sẽ đọc package.json / package-lock.json
       # để biết cần cài đặt những package nào.
-      - run: npm install --force
+      # - run: npm install --force
+      # Ta sẽ chuyển sang dùng npm ci ở cả 2 job, vì npm ci được thiết kế chính xác cho mục đích:
+      # - Job build cài đúng dependency đã được khóa trong package-lock.json.
+      # - Job deploy trên VPS cũng cài đúng dependency tương ứng.
+      # - Không có chuyện npm tự sửa lockfile khiến dependency giữa các môi trường bị lệch ngoài dự kiến.
+      - run: npm ci
 
       # bước 5: build dự án.
       # Ta yêu cầu npm chạy script có tên "build"
       #
       # npm tìm script có tên build trong "script" của package.json
-      - run: npm run
+      - run: npm run build
 
   # Ta tạo Job thứ 2 có tên "deploy"
   # -> Job này sẽ chịu trách nhiệm đưa phiên bản mới nhất lên VPS.
@@ -211,7 +216,13 @@ jobs:
             # tương ứng với source code mới vừa lấy về.
             # 
             # npm đọc package.json / package-lock.json để biết phải cài gì.
-            npm install --force
+            # Lưu ý Bỏ lệnh cho cả job build lẫn deploy: npm install --force
+
+            # Ta sẽ chuyển sang dùng npm ci ở cả 2 job, vì npm ci được thiết kế chính xác cho mục đích:
+            # - Job build cài đúng dependency đã được khóa trong package-lock.json.
+            # - Job deploy trên VPS cũng cài đúng dependency tương ứng.
+            # - Không có chuyện npm tự sửa lockfile khiến dependency giữa các môi trường bị lệch ngoài dự kiến.
+            npm ci
 
             # Ta yêu cầu npx chạy Prisma CLI
             # 
@@ -231,7 +242,13 @@ jobs:
             # "Fastify" là tên process đã được đăng ký với PM2 trước đó.
             # Chính PM2 sẽ stop/start lại application,
             # để phiên bản mới vừa build được đưa vào chạy.
-            pm2 restart Fastify_server
+            # 
+            # Nếu không có cờ --update-env thì:
+            # PM2 khởi động lại ứng dụng, Mặc định tiếp tục sử dụng bộ biến môi trường đã lưu trước đó.
+            # Nếu có cờ --update-end thì:
+            # PM2 khởi động lại ứng dụng.
+            # Đồng thời cập nhật biến môi trường từ shell đang thực thi lệnh.
+            pm2 restart Fastify_server_development --update-end
 
 # Work flow tổng quát khi có code push vào nhánh được chỉ định (GITHUB ACTIONS PHÁT HIỆN CÓ WORKFLOW):
 # Push code lên GitHub
