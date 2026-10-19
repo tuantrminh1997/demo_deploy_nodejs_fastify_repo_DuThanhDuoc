@@ -12,9 +12,9 @@ on:
     # Nhưng chỉ thực thi workflow khi có người push code vào nhánh development
     branches: ['development']
   # Ta cũng yêu cầu Github thực thi workflow khi có Pull Request được merge
-  pull_request:
-    # Nhưng sẽ chỉ thực thi khi Pull Request được merge vào nhánh development.
-    branches: ['development']
+  # pull_request:
+  # Nhưng sẽ chỉ thực thi khi Pull Request được merge vào nhánh development.
+  # branches: ['development']
 
 # Khai báo các CÔNG VIỆC LỚN mà workflow phải làm
 jobs:
