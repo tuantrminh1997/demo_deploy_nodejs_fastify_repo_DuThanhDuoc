@@ -30,14 +30,21 @@ if (!allowedEnvironments.includes(environment)) {
 }
 
 // Chỉ ở development mới thử đọc file .env; staging/production dùng biến do hệ thống deploy truyền vào.
-if (environment === 'development') {
-  // dotenv đọc file .env và đưa các giá trị vào process.env của tiến trình đang nạp cấu hình.
-  // Biến đã tồn tại trong process.env sẽ được giữ nguyên (không bị .env ghi đè mặc định).
-  require('dotenv').config({
-    // Xác định chính xác file .env nằm cùng thư mục với ecosystem.config.cjs.
-    path: path.join(__dirname, '.env')
-  })
-}
+// if (environment === 'development') {
+//   // dotenv đọc file .env và đưa các giá trị vào process.env của tiến trình đang nạp cấu hình.
+//   // Biến đã tồn tại trong process.env sẽ được giữ nguyên (không bị .env ghi đè mặc định).
+//   require('dotenv').config({
+//     // Xác định chính xác file .env nằm cùng thư mục với ecosystem.config.cjs.
+//     path: path.join(__dirname, '.env')
+//   })
+// }
+
+// dotenv đọc file .env và đưa các giá trị vào process.env của tiến trình đang nạp cấu hình.
+// Biến đã tồn tại trong process.env sẽ được giữ nguyên (không bị .env ghi đè mặc định).
+require('dotenv').config({
+  // Xác định chính xác file .env nằm cùng thư mục với ecosystem.config.cjs.
+  path: path.join(__dirname, '.env')
+})
 
 // Xuất đối tượng cấu hình cho PM2; đây không phải đoạn code trực tiếp chạy Next.js.
 module.exports = {
