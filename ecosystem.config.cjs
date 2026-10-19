@@ -47,7 +47,7 @@ module.exports = {
     {
       // Ghép tên app với môi trường đã nhận diện để hiển thị riêng trong pm2 ls.
       // Ví dụ: frontend_nextjs_staging; tên này KHÔNG tự thiết lập biến APP_ENV/NODE_ENV.
-      name: 'Fastify_server',
+      name: `Fastify_server_${environment}`,
 
       // "script" cho PM2 biết CHƯƠNG TRÌNH nào cần khởi chạy, chưa phải lệnh đầy đủ.
       // process.platform là tên hệ điều hành do Node.js cung cấp; "win32" nghĩa là Windows.
