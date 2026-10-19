@@ -12,9 +12,10 @@ on:
     # Nhưng chỉ thực thi workflow khi có người push code vào nhánh production
     branches: ['production']
   # Ta cũng yêu cầu Github thực thi workflow khi có Pull Request được merge
-  pull_request:
-    # Nhưng sẽ chỉ thực thi khi Pull Request được merge vào nhánh production.
-    branches: ['production']
+  # -> Thực tế ta không làm thế này -> chỉ auto chạy github action khi xuất hiện commit mới trên nhánh production
+  # pull_request:
+  # Nhưng sẽ chỉ thực thi khi Pull Request được merge vào nhánh production.
+  # branches: ['production']
 
 # Khai báo các CÔNG VIỆC LỚN mà workflow phải làm
 jobs:
